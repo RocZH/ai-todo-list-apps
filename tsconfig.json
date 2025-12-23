@@ -6,7 +6,10 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
   },
   "include": [
     "**/*.ts",

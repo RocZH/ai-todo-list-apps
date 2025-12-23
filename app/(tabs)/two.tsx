@@ -49,11 +49,11 @@ export default function TabTwoScreen() {
         <Text style={styles.emptyText}>Complete some tasks to see stats here!</Text>
       ) : (
         <>
-          {state.todos.some(todo => todo.aiGenerated) && (
+          {state.todos.some(todo => todo.ai_generated) && (
             <View style={styles.aiSection}>
               <Text style={styles.aiTitle}>AI-Powered Insights</Text>
               <Text style={styles.aiText}>
-                You've added {state.todos.filter(t => t.aiGenerated).length} AI-generated tasks.
+                You've added {state.todos.filter(t => t.ai_generated).length} AI-generated tasks.
               </Text>
             </View>
           )}

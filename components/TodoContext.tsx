@@ -10,6 +10,12 @@ export interface Todo {
   ai_generated?: boolean;
 }
 
+export interface TodoState {
+  todos: Todo[];
+  loading: boolean;
+  error: string | null;
+}
+
 type TodoAction =
   | { type: 'ADD_TODO'; payload: Todo }
   | { type: 'TOGGLE_TODO'; payload: Todo }
@@ -19,12 +25,6 @@ type TodoAction =
   | { type: 'CLEAR_COMPLETED' }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null };
-
-interface TodoState {
-  todos: Todo[];
-  loading: boolean;
-  error: string | null;
-}
 
 const initialState: TodoState = {
   todos: [],
@@ -151,10 +151,18 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
       )
       .subscribe();
 
+    // Cleanup function
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Helper function to handle errors consistently
+  const handleError = (error: any, operation: string) => {
+    const errorMessage = error?.message || `Failed to ${operation}`;
+    console.error(`Error ${operation}:`, error);
+    dispatch({ type: 'SET_ERROR', payload: errorMessage });
+  };
 
   const loadTodos = async () => {
     try {
@@ -165,13 +173,12 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        throw new Error(error.message);
+        throw error;
       }
 
       dispatch({ type: 'SET_TODOS', payload: data || [] });
     } catch (error: any) {
-      console.error('Error loading todos:', error);
-      dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to load todos' });
+      handleError(error, 'load todos');
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -181,27 +188,28 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
     if (!text.trim()) return;
 
     try {
+      const timestamp = new Date().toISOString();
       const { data, error } = await supabase
         .from('todos')
         .insert([
           {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Generate unique ID
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
             text: text.trim(),
             completed: false,
             ai_generated: aiGenerated,
+            created_at: timestamp,
           },
         ])
         .select()
         .single();
 
       if (error) {
-        throw new Error(error.message);
+        throw error;
       }
 
       dispatch({ type: 'ADD_TODO', payload: data as Todo });
     } catch (error: any) {
-      console.error('Error adding todo:', error);
-      dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to add todo' });
+      handleError(error, 'add todo');
     }
   };
 
@@ -218,13 +226,12 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
         .single();
 
       if (error) {
-        throw new Error(error.message);
+        throw error;
       }
 
       dispatch({ type: 'TOGGLE_TODO', payload: data as Todo });
     } catch (error: any) {
-      console.error('Error toggling todo:', error);
-      dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to toggle todo' });
+      handleError(error, 'toggle todo');
     }
   };
 
@@ -236,13 +243,12 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
         .eq('id', id);
 
       if (error) {
-        throw new Error(error.message);
+        throw error;
       }
 
       dispatch({ type: 'DELETE_TODO', payload: { id } });
     } catch (error: any) {
-      console.error('Error deleting todo:', error);
-      dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to delete todo' });
+      handleError(error, 'delete todo');
     }
   };
 
@@ -258,13 +264,12 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
         .single();
 
       if (error) {
-        throw new Error(error.message);
+        throw error;
       }
 
       dispatch({ type: 'EDIT_TODO', payload: data as Todo });
     } catch (error: any) {
-      console.error('Error editing todo:', error);
-      dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to edit todo' });
+      handleError(error, 'edit todo');
     }
   };
 
@@ -276,13 +281,12 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
         .eq('completed', true);
 
       if (error) {
-        throw new Error(error.message);
+        throw error;
       }
 
       dispatch({ type: 'CLEAR_COMPLETED' });
     } catch (error: any) {
-      console.error('Error clearing completed todos:', error);
-      dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to clear completed todos' });
+      handleError(error, 'clear completed todos');
     }
   };
 

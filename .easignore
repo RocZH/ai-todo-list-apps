@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+
+# Expo cache
+.expo
+
+# Local build files (these will be regenerated)
+ios
+android
+
+# Build output
+dist
+.next
+
+# Environment specific files
+.env.local
+.env.development
+.env.test
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode
+.idea
+
+# Logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# Temporary folders
+tmp
+temp

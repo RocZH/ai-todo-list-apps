@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View as DefaultView,
   Text as DefaultText,
@@ -23,7 +23,7 @@ interface TodoItemProps {
   onEdit: (id: string, text: string) => void;
 }
 
-const TodoItem: React.FC<TodoItemProps> = ({
+const TodoItem: React.FC<TodoItemProps> = React.memo(({
   id,
   text,
   completed,
@@ -35,14 +35,23 @@ const TodoItem: React.FC<TodoItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text);
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = useCallback(() => {
     if (editText.trim()) {
       onEdit(id, editText);
       setIsEditing(false);
     } else {
       Alert.alert('Error', 'Todo text cannot be empty');
     }
-  };
+  }, [editText, id, onEdit]);
+
+  const toggleEditing = useCallback(() => {
+    if (isEditing) {
+      setIsEditing(false);
+      setEditText(text); // Revert to original text if canceling edit
+    } else {
+      setIsEditing(true);
+    }
+  }, [isEditing, text]);
 
   return (
     <View style={styles.todoItem}>
@@ -64,10 +73,9 @@ const TodoItem: React.FC<TodoItemProps> = ({
             onChangeText={setEditText}
             style={styles.editInput}
             autoFocus
+            onSubmitEditing={handleSaveEdit}
+            onBlur={handleSaveEdit}
           />
-          <TouchableOpacity onPress={handleSaveEdit} style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.textContainer}>
@@ -88,7 +96,7 @@ const TodoItem: React.FC<TodoItemProps> = ({
       
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          onPress={() => (isEditing ? setIsEditing(false) : setIsEditing(true))}
+          onPress={toggleEditing}
           style={styles.editButton}
         >
           <Text style={styles.buttonText}>
@@ -104,34 +112,42 @@ const TodoItem: React.FC<TodoItemProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const TodoList: React.FC = () => {
   const { state, addTodo, toggleTodo, deleteTodo, editTodo, clearCompleted } = useTodoContext();
   const [inputText, setInputText] = useState('');
 
-  const handleAddTodo = () => {
+  const handleAddTodo = useCallback(() => {
     if (inputText.trim()) {
       addTodo(inputText.trim());
       setInputText('');
     }
-  };
+  }, [inputText, addTodo]);
 
-  const handleToggleTodo = (id: string) => {
+  const handleToggleTodo = useCallback((id: string) => {
     toggleTodo(id);
-  };
+  }, [toggleTodo]);
 
-  const handleDeleteTodo = (id: string) => {
+  const handleDeleteTodo = useCallback((id: string) => {
     deleteTodo(id);
-  };
+  }, [deleteTodo]);
 
-  const handleEditTodo = (id: string, text: string) => {
+  const handleEditTodo = useCallback((id: string, text: string) => {
     editTodo(id, text);
-  };
+  }, [editTodo]);
 
-  const handleClearCompleted = () => {
+  const handleClearCompleted = useCallback(() => {
     clearCompleted();
-  };
+  }, [clearCompleted]);
+
+  const activeTodosCount = state.todos.filter(t => !t.completed).length;
+
+  const handleKeyPress = useCallback((event: any) => {
+    if (event.nativeEvent.key === 'Enter') {
+      handleAddTodo();
+    }
+  }, [handleAddTodo]);
 
   return (
     <View style={styles.container}>
@@ -142,6 +158,7 @@ const TodoList: React.FC = () => {
           placeholder="Add a new task..."
           style={styles.input}
           onSubmitEditing={handleAddTodo}
+          onKeyPress={handleKeyPress}
         />
         <TouchableOpacity onPress={handleAddTodo} style={styles.addButton}>
           <Text style={styles.addButtonText}>Add</Text>
@@ -150,7 +167,7 @@ const TodoList: React.FC = () => {
 
       <View style={styles.actionsContainer}>
         <Text style={styles.countText}>
-          {state.todos.filter(t => !t.completed).length} items left
+          {activeTodosCount} {activeTodosCount === 1 ? 'item' : 'items'} left
         </Text>
         <TouchableOpacity onPress={handleClearCompleted} style={styles.clearButton}>
           <Text style={styles.clearButtonText}>Clear Completed</Text>
@@ -165,13 +182,15 @@ const TodoList: React.FC = () => {
             id={item.id}
             text={item.text}
             completed={item.completed}
-            aiGenerated={item.aiGenerated}
+            aiGenerated={item.ai_generated}
             onToggle={handleToggleTodo}
             onDelete={handleDeleteTodo}
             onEdit={handleEditTodo}
           />
         )}
         style={styles.list}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -229,6 +248,9 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  listContent: {
+    paddingBottom: 16,
   },
   todoItem: {
     flexDirection: 'row',
@@ -302,7 +324,7 @@ const styles = StyleSheet.create({
   editInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#007AFF',
     borderRadius: 4,
     padding: 8,
     marginRight: 8,
