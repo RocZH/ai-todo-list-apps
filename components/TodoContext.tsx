@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Define types
@@ -109,62 +109,66 @@ interface TodoProviderProps {
 export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(todoReducer, initialState);
 
-  // Load todos from Supabase on component mount
-  useEffect(() => {
-    loadTodos();
-    
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('todos-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'todos',
-        },
-        (payload) => {
-          dispatch({ type: 'ADD_TODO', payload: payload.new as Todo });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'todos',
-        },
-        (payload) => {
-          dispatch({ type: 'TOGGLE_TODO', payload: payload.new as Todo });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'todos',
-        },
-        (payload) => {
-          dispatch({ type: 'DELETE_TODO', payload: { id: payload.old.id } });
-        }
-      )
-      .subscribe();
-
-    // Cleanup function
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
   // Helper function to handle errors consistently
-  const handleError = (error: any, operation: string) => {
+  const handleError = useCallback((error: any, operation: string) => {
     const errorMessage = error?.message || `Failed to ${operation}`;
     console.error(`Error ${operation}:`, error);
     dispatch({ type: 'SET_ERROR', payload: errorMessage });
-  };
+  }, []);
 
-  const loadTodos = async () => {
+  // Load todos from Supabase on component mount
+  useEffect(() => {
+    const loadAndSubscribe = async () => {
+      await loadTodos();
+      
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('todos-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'todos',
+          },
+          (payload) => {
+            dispatch({ type: 'ADD_TODO', payload: payload.new as Todo });
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'todos',
+          },
+          (payload) => {
+            dispatch({ type: 'TOGGLE_TODO', payload: payload.new as Todo });
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'todos',
+          },
+          (payload) => {
+            dispatch({ type: 'DELETE_TODO', payload: { id: payload.old.id } });
+          }
+        )
+        .subscribe();
+
+      // Cleanup function
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    loadAndSubscribe();
+  }, []);
+
+  const loadTodos = useCallback(async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const { data, error } = await supabase
@@ -182,9 +186,9 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [handleError]);
 
-  const addTodo = async (text: string, aiGenerated: boolean = false) => {
+  const addTodo = useCallback(async (text: string, aiGenerated: boolean = false) => {
     if (!text.trim()) return;
 
     try {
@@ -211,9 +215,9 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
     } catch (error: any) {
       handleError(error, 'add todo');
     }
-  };
+  }, [handleError]);
 
-  const toggleTodo = async (id: string) => {
+  const toggleTodo = useCallback(async (id: string) => {
     const todo = state.todos.find(todo => todo.id === id);
     if (!todo) return;
 
@@ -233,9 +237,9 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
     } catch (error: any) {
       handleError(error, 'toggle todo');
     }
-  };
+  }, [state.todos, handleError]);
 
-  const deleteTodo = async (id: string) => {
+  const deleteTodo = useCallback(async (id: string) => {
     try {
       const { error } = await supabase
         .from('todos')
@@ -250,9 +254,9 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
     } catch (error: any) {
       handleError(error, 'delete todo');
     }
-  };
+  }, [handleError]);
 
-  const editTodo = async (id: string, text: string) => {
+  const editTodo = useCallback(async (id: string, text: string) => {
     if (!text.trim()) return;
 
     try {
@@ -271,9 +275,9 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
     } catch (error: any) {
       handleError(error, 'edit todo');
     }
-  };
+  }, [handleError]);
 
-  const clearCompleted = async () => {
+  const clearCompleted = useCallback(async () => {
     try {
       const { error } = await supabase
         .from('todos')
@@ -288,7 +292,7 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
     } catch (error: any) {
       handleError(error, 'clear completed todos');
     }
-  };
+  }, [handleError]);
 
   return (
     <TodoContext.Provider

@@ -26,12 +26,12 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "versionCode": 2,
       "package": "com.roczh.aitodolistapps",
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
-      ]
+      ],
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "bundler": "metro",
@@ -44,23 +44,29 @@
       [
         "expo-build-properties",
         {
-                      "android": {
-                      "compileSdkVersion": 34,
-                      "targetSdkVersion": 34,
-                      "buildToolsVersion": "34.0.0",
-                      "kotlinVersion": "1.9.10",
-                      "packagingOptions": {
-                        "pickFirst": [
-                          "META-INF/**"
-                        ]
-                      },
-                      "buildType": "apk",
-                      "enableProguardInReleaseBuilds": false,
-                      "newArchEnabled": false
-                    },                "ios": {
-                  "deploymentTarget": "15.1",
-                  "newArchEnabled": false
-                }        }
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0",
+            "kotlinVersion": "1.9.10",
+            "compileSdk": 34,
+            "targetSdk": 34,
+            "minSdkVersion": 24,
+            "packagingOptions": {
+              "pickFirst": [
+                "META-INF/**"
+              ]
+            },
+            "buildType": "apk",
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "useLegacyPackaging": false,
+            "applicationId": "com.roczh.aitodolistapps"
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
       ],
       "expo-font"
     ],

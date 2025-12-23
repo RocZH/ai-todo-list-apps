@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 8.0.0",
+    "version": ">= 10.0.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -17,12 +17,16 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       },
       "ios": {
         "simulator": false
       },
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "EXPO_USE_FAST_RESOLVER": "1"
+      }
     },
     "preview-production": {
       "distribution": "internal",
@@ -36,7 +40,8 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
       },
       "ios": {
         "resourceClass": "m1-medium"

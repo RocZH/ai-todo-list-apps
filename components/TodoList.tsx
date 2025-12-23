@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View as DefaultView,
   Text as DefaultText,
@@ -7,8 +7,8 @@ import {
   FlatList,
   StyleSheet,
   Alert,
-  Modal,
-  Pressable,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useTodoContext } from '@/components/TodoContext';
@@ -39,6 +39,7 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({
     if (editText.trim()) {
       onEdit(id, editText);
       setIsEditing(false);
+      Keyboard.dismiss();
     } else {
       Alert.alert('Error', 'Todo text cannot be empty');
     }
@@ -53,9 +54,21 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({
     }
   }, [isEditing, text]);
 
+  const handleKeyPress = useCallback((event: any) => {
+    if (event.nativeEvent.key === 'Enter') {
+      handleSaveEdit();
+    }
+  }, [handleSaveEdit]);
+
   return (
     <View style={styles.todoItem}>
-      <TouchableOpacity onPress={() => onToggle(id)} style={styles.checkbox}>
+      <TouchableOpacity 
+        onPress={() => onToggle(id)} 
+        style={styles.checkbox}
+        accessibilityLabel={`Mark ${completed ? 'incomplete' : 'complete'}: ${text}`}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: completed }}
+      >
         <View
           style={[
             styles.checkboxInner,
@@ -75,6 +88,8 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({
             autoFocus
             onSubmitEditing={handleSaveEdit}
             onBlur={handleSaveEdit}
+            onKeyPress={handleKeyPress}
+            accessibilityLabel="Edit todo text"
           />
         </View>
       ) : (
@@ -85,6 +100,7 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({
               completed && styles.todoTextCompleted,
               aiGenerated && styles.aiGeneratedText,
             ]}
+            accessibilityLabel={text}
           >
             {text}
           </Text>
@@ -98,6 +114,7 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({
         <TouchableOpacity
           onPress={toggleEditing}
           style={styles.editButton}
+          accessibilityLabel={isEditing ? 'Cancel editing' : 'Edit todo'}
         >
           <Text style={styles.buttonText}>
             {isEditing ? 'Cancel' : 'Edit'}
@@ -106,6 +123,7 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({
         <TouchableOpacity
           onPress={() => onDelete(id)}
           style={styles.deleteButton}
+          accessibilityLabel={`Delete todo: ${text}`}
         >
           <Text style={styles.buttonText}>Delete</Text>
         </TouchableOpacity>
@@ -122,6 +140,7 @@ const TodoList: React.FC = () => {
     if (inputText.trim()) {
       addTodo(inputText.trim());
       setInputText('');
+      Keyboard.dismiss();
     }
   }, [inputText, addTodo]);
 
@@ -138,16 +157,37 @@ const TodoList: React.FC = () => {
   }, [editTodo]);
 
   const handleClearCompleted = useCallback(() => {
-    clearCompleted();
-  }, [clearCompleted]);
+    if (state.todos.filter(t => t.completed).length > 0) {
+      Alert.alert(
+        'Clear Completed Todos',
+        'Are you sure you want to delete all completed todos?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: clearCompleted },
+        ]
+      );
+    }
+  }, [state.todos, clearCompleted]);
 
-  const activeTodosCount = state.todos.filter(t => !t.completed).length;
+  const activeTodosCount = useMemo(() => state.todos.filter(t => !t.completed).length, [state.todos]);
 
   const handleKeyPress = useCallback((event: any) => {
     if (event.nativeEvent.key === 'Enter') {
       handleAddTodo();
     }
   }, [handleAddTodo]);
+
+  const renderTodoItem = useCallback(({ item }: { item: any }) => (
+    <TodoItem
+      id={item.id}
+      text={item.text}
+      completed={item.completed}
+      aiGenerated={item.ai_generated}
+      onToggle={handleToggleTodo}
+      onDelete={handleDeleteTodo}
+      onEdit={handleEditTodo}
+    />
+  ), [handleToggleTodo, handleDeleteTodo, handleEditTodo]);
 
   return (
     <View style={styles.container}>
@@ -159,17 +199,27 @@ const TodoList: React.FC = () => {
           style={styles.input}
           onSubmitEditing={handleAddTodo}
           onKeyPress={handleKeyPress}
+          accessibilityLabel="Add new todo input"
         />
-        <TouchableOpacity onPress={handleAddTodo} style={styles.addButton}>
+        <TouchableOpacity 
+          onPress={handleAddTodo} 
+          style={styles.addButton}
+          accessibilityLabel="Add todo button"
+        >
           <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.actionsContainer}>
-        <Text style={styles.countText}>
+        <Text style={styles.countText} accessibilityLabel={`Items left: ${activeTodosCount}`}>
           {activeTodosCount} {activeTodosCount === 1 ? 'item' : 'items'} left
         </Text>
-        <TouchableOpacity onPress={handleClearCompleted} style={styles.clearButton}>
+        <TouchableOpacity 
+          onPress={handleClearCompleted} 
+          style={styles.clearButton}
+          disabled={state.todos.filter(t => t.completed).length === 0}
+          accessibilityLabel="Clear completed todos"
+        >
           <Text style={styles.clearButtonText}>Clear Completed</Text>
         </TouchableOpacity>
       </View>
@@ -177,20 +227,12 @@ const TodoList: React.FC = () => {
       <FlatList
         data={state.todos}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TodoItem
-            id={item.id}
-            text={item.text}
-            completed={item.completed}
-            aiGenerated={item.ai_generated}
-            onToggle={handleToggleTodo}
-            onDelete={handleDeleteTodo}
-            onEdit={handleEditTodo}
-          />
-        )}
+        renderItem={renderTodoItem}
         style={styles.list}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        accessibilityLabel="List of todos"
       />
     </View>
   );
@@ -214,6 +256,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginRight: 8,
     fontSize: 16,
+    backgroundColor: 'white',
   },
   addButton: {
     backgroundColor: '#007AFF',
@@ -241,6 +284,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
+  },
+  clearButtonDisabled: {
+    opacity: 0.5,
   },
   clearButtonText: {
     color: 'white',
@@ -328,15 +374,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 8,
     marginRight: 8,
-  },
-  saveButton: {
-    backgroundColor: '#34C759',
-    borderRadius: 4,
-    padding: 8,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 12,
   },
 });
 

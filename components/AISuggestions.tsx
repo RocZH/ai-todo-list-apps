@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View as DefaultView,
   Text as DefaultText,
@@ -7,7 +7,8 @@ import {
   FlatList,
   StyleSheet,
   Modal,
-  Pressable,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useAIService } from '@/components/AIService';
@@ -21,12 +22,21 @@ interface SuggestionItemProps {
 const SuggestionItem: React.FC<SuggestionItemProps> = React.memo(({ text, onAdd }) => {
   return (
     <View style={styles.suggestionItem}>
-      <Text style={styles.suggestionText} numberOfLines={2} ellipsizeMode="tail">
+      <Text 
+        style={styles.suggestionText} 
+        numberOfLines={2} 
+        ellipsizeMode="tail"
+        accessibilityLabel={text}
+      >
         {text}
       </Text>
       <TouchableOpacity 
-        onPress={() => onAdd(text)}
+        onPress={() => {
+          onAdd(text);
+          Keyboard.dismiss();
+        }}
         style={styles.addButton}
+        accessibilityLabel={`Add suggestion: ${text}`}
       >
         <Text style={styles.addButtonText}>Add</Text>
       </TouchableOpacity>
@@ -43,21 +53,21 @@ const AISuggestions: React.FC = () => {
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
 
-  const handleGetSuggestions = async () => {
+  const handleGetSuggestions = useCallback(async () => {
     if (!inputText.trim()) return;
     
     const result = await generateTodoSuggestions(inputText);
     setSuggestions(result);
     setShowSuggestionModal(true);
-  };
+  }, [inputText, generateTodoSuggestions]);
 
-  const handleGenerateList = async () => {
+  const handleGenerateList = useCallback(async () => {
     if (!inputText.trim()) return;
     
     const result = await generateTodoList(inputText);
     setGeneratedList(result);
     setShowListModal(true);
-  };
+  }, [inputText, generateTodoList]);
 
   const handleAddSuggestion = useCallback((suggestion: string) => {
     addTodo(suggestion, true); // aiGenerated = true
@@ -68,6 +78,7 @@ const AISuggestions: React.FC = () => {
       addTodo(suggestion, true); // aiGenerated = true
     });
     setShowSuggestionModal(false);
+    Keyboard.dismiss();
   }, [suggestions, addTodo]);
 
   const handleAddAllListItems = useCallback(() => {
@@ -75,18 +86,42 @@ const AISuggestions: React.FC = () => {
       addTodo(item, true); // aiGenerated = true
     });
     setShowListModal(false);
+    Keyboard.dismiss();
   }, [generatedList, addTodo]);
 
   const handleKeyPress = useCallback((event: any) => {
-    if (event.nativeEvent.key === 'Enter') {
-      // Default to getting suggestions when enter is pressed
+    if (event.nativeEvent.key === 'Enter' && Platform.OS === 'android') {
+      // On Android, handle enter key press to get suggestions
       handleGetSuggestions();
     }
-  }, [inputText]);
+  }, [handleGetSuggestions]);
+
+  const handleInputSubmit = useCallback(() => {
+    if (inputText.trim()) {
+      handleGetSuggestions();
+    }
+  }, [inputText, handleGetSuggestions]);
+
+  const renderSuggestionItem = useCallback(({ item }: { item: any }) => (
+    <SuggestionItem 
+      text={item} 
+      onAdd={handleAddSuggestion} 
+    />
+  ), [handleAddSuggestion]);
+
+  const renderListItem = useCallback(({ item }: { item: any }) => (
+    <SuggestionItem 
+      text={item} 
+      onAdd={handleAddSuggestion} 
+    />
+  ), [handleAddSuggestion]);
+
+  const hasSuggestions = useMemo(() => suggestions.length > 0, [suggestions]);
+  const hasGeneratedList = useMemo(() => generatedList.length > 0, [generatedList]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>AI Todo Assistant</Text>
+      <Text style={styles.title} accessibilityLabel="AI Todo Assistant">AI Todo Assistant</Text>
       
       <View style={styles.inputContainer}>
         <TextInput
@@ -98,6 +133,8 @@ const AISuggestions: React.FC = () => {
           numberOfLines={2}
           textAlignVertical="top"
           onKeyPress={handleKeyPress}
+          onSubmitEditing={handleInputSubmit}
+          accessibilityLabel="Describe your goals or tasks for AI suggestions"
         />
       </View>
       
@@ -105,7 +142,8 @@ const AISuggestions: React.FC = () => {
         <TouchableOpacity 
           onPress={handleGetSuggestions} 
           style={[styles.button, styles.suggestionButton]}
-          disabled={isLoading}
+          disabled={isLoading || !inputText.trim()}
+          accessibilityLabel="Get AI suggestions"
         >
           <Text style={styles.buttonText}>Get Suggestions</Text>
         </TouchableOpacity>
@@ -113,18 +151,19 @@ const AISuggestions: React.FC = () => {
         <TouchableOpacity 
           onPress={handleGenerateList} 
           style={[styles.button, styles.listButton]}
-          disabled={isLoading}
+          disabled={isLoading || !inputText.trim()}
+          accessibilityLabel="Generate AI todo list"
         >
           <Text style={styles.buttonText}>Generate Todo List</Text>
         </TouchableOpacity>
       </View>
       
       {isLoading && (
-        <Text style={styles.loadingText}>AI is thinking...</Text>
+        <Text style={styles.loadingText} accessibilityLabel="AI is thinking">AI is thinking...</Text>
       )}
       
       {error && (
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText} accessibilityLabel={`Error: ${error}`}>{error}</Text>
       )}
       
       {/* Suggestion Modal */}
@@ -136,29 +175,31 @@ const AISuggestions: React.FC = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>AI Suggestions</Text>
+            <Text style={styles.modalTitle} accessibilityLabel="AI Suggestions">AI Suggestions</Text>
             <FlatList
               data={suggestions}
               keyExtractor={(item, index) => `${item}-${index}`}
-              renderItem={({ item }) => (
-                <SuggestionItem 
-                  text={item} 
-                  onAdd={handleAddSuggestion} 
-                />
-              )}
+              renderItem={renderSuggestionItem}
               contentContainerStyle={styles.modalListContent}
               showsVerticalScrollIndicator={false}
+              accessibilityLabel="List of AI suggestions"
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
-                onPress={() => setShowSuggestionModal(false)}
+                onPress={() => {
+                  setShowSuggestionModal(false);
+                  Keyboard.dismiss();
+                }}
                 style={styles.modalCancelButton}
+                accessibilityLabel="Cancel"
               >
                 <Text style={styles.modalCancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAddAllSuggestions}
                 style={styles.modalAddAllButton}
+                disabled={!hasSuggestions}
+                accessibilityLabel="Add all suggestions"
               >
                 <Text style={styles.modalAddAllButtonText}>Add All</Text>
               </TouchableOpacity>
@@ -176,29 +217,31 @@ const AISuggestions: React.FC = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Generated Todo List</Text>
+            <Text style={styles.modalTitle} accessibilityLabel="Generated Todo List">Generated Todo List</Text>
             <FlatList
               data={generatedList}
               keyExtractor={(item, index) => `${item}-${index}`}
-              renderItem={({ item }) => (
-                <SuggestionItem 
-                  text={item} 
-                  onAdd={handleAddSuggestion} 
-                />
-              )}
+              renderItem={renderListItem}
               contentContainerStyle={styles.modalListContent}
               showsVerticalScrollIndicator={false}
+              accessibilityLabel="List of generated todo items"
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
-                onPress={() => setShowListModal(false)}
+                onPress={() => {
+                  setShowListModal(false);
+                  Keyboard.dismiss();
+                }}
                 style={styles.modalCancelButton}
+                accessibilityLabel="Cancel"
               >
                 <Text style={styles.modalCancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAddAllListItems}
                 style={styles.modalAddAllButton}
+                disabled={!hasGeneratedList}
+                accessibilityLabel="Add all items"
               >
                 <Text style={styles.modalAddAllButtonText}>Add All</Text>
               </TouchableOpacity>
@@ -231,6 +274,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     minHeight: 80,
+    backgroundColor: 'white',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -243,6 +287,10 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     marginHorizontal: 4,
+    opacity: 1,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   suggestionButton: {
     backgroundColor: '#007AFF',
