@@ -15,7 +15,7 @@ import { useTodoContext } from '@/components/TodoContext';
 
 const AISuggestions: React.FC = () => {
   const { generateTodoSuggestions, generateTodoList, isLoading, error } = useAIService();
-  const { dispatch } = useTodoContext();
+  const { addTodo } = useTodoContext();
   const [inputText, setInputText] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [generatedList, setGeneratedList] = useState<string[]>([]);
@@ -39,28 +39,19 @@ const AISuggestions: React.FC = () => {
   };
 
   const handleAddSuggestion = (suggestion: string) => {
-    dispatch({
-      type: 'ADD_TODO',
-      payload: { text: suggestion, aiGenerated: true },
-    });
+    addTodo(suggestion, true); // aiGenerated = true
   };
 
   const handleAddAllSuggestions = () => {
     suggestions.forEach(suggestion => {
-      dispatch({
-        type: 'ADD_TODO',
-        payload: { text: suggestion, aiGenerated: true },
-      });
+      addTodo(suggestion, true); // aiGenerated = true
     });
     setShowSuggestionModal(false);
   };
 
   const handleAddAllListItems = () => {
     generatedList.forEach(item => {
-      dispatch({
-        type: 'ADD_TODO',
-        payload: { text: item, aiGenerated: true },
-      });
+      addTodo(item, true); // aiGenerated = true
     });
     setShowListModal(false);
   };

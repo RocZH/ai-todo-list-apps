@@ -107,33 +107,30 @@ const TodoItem: React.FC<TodoItemProps> = ({
 };
 
 const TodoList: React.FC = () => {
-  const { state, dispatch } = useTodoContext();
+  const { state, addTodo, toggleTodo, deleteTodo, editTodo, clearCompleted } = useTodoContext();
   const [inputText, setInputText] = useState('');
 
   const handleAddTodo = () => {
     if (inputText.trim()) {
-      dispatch({
-        type: 'ADD_TODO',
-        payload: { text: inputText.trim() },
-      });
+      addTodo(inputText.trim());
       setInputText('');
     }
   };
 
   const handleToggleTodo = (id: string) => {
-    dispatch({ type: 'TOGGLE_TODO', payload: { id } });
+    toggleTodo(id);
   };
 
   const handleDeleteTodo = (id: string) => {
-    dispatch({ type: 'DELETE_TODO', payload: { id } });
+    deleteTodo(id);
   };
 
   const handleEditTodo = (id: string, text: string) => {
-    dispatch({ type: 'EDIT_TODO', payload: { id, text } });
+    editTodo(id, text);
   };
 
   const handleClearCompleted = () => {
-    dispatch({ type: 'CLEAR_COMPLETED' });
+    clearCompleted();
   };
 
   return (

@@ -5,17 +5,14 @@ import { useAIService } from '@/components/AIService';
 import { useState } from 'react';
 
 export default function ModalScreen() {
-  const { dispatch } = useTodoContext();
+  const { addTodo } = useTodoContext();
   const { generateTodoList, isLoading } = useAIService();
   const [inputText, setInputText] = useState('');
   const [aiGeneratedTasks, setAiGeneratedTasks] = useState<string[]>([]);
 
   const handleAddSingleTask = () => {
     if (inputText.trim()) {
-      dispatch({
-        type: 'ADD_TODO',
-        payload: { text: inputText.trim(), aiGenerated: true },
-      });
+      addTodo(inputText.trim(), true); // aiGenerated = true
       setInputText('');
     }
   };
@@ -28,10 +25,7 @@ export default function ModalScreen() {
   };
 
   const handleAddGeneratedTask = (task: string) => {
-    dispatch({
-      type: 'ADD_TODO',
-      payload: { text: task, aiGenerated: true },
-    });
+    addTodo(task, true); // aiGenerated = true
   };
 
   return (
