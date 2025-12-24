@@ -30,6 +30,7 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({
   text,
   completed,
   aiGenerated,
+  created_at,
   onToggle,
   onDelete,
   onEdit,
