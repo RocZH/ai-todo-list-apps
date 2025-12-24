@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useTodoContext } from '@/components/TodoContext';
+import { formatRelativeTime } from '@/lib/timeUtils';
 
 interface TodoItemProps {
   id: string;
   text: string;
   completed: boolean;
   aiGenerated?: boolean;
+  created_at?: string;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, text: string) => void;
@@ -107,6 +109,9 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({
           {aiGenerated && (
             <Text style={styles.aiIndicator}>AI</Text>
           )}
+          {created_at && (
+            <Text style={styles.timeText}>{formatRelativeTime(created_at)}</Text>
+          )}
         </View>
       )}
       
@@ -183,6 +188,7 @@ const TodoList: React.FC = () => {
       text={item.text}
       completed={item.completed}
       aiGenerated={item.ai_generated}
+      created_at={item.created_at}
       onToggle={handleToggleTodo}
       onDelete={handleDeleteTodo}
       onEdit={handleEditTodo}
@@ -348,6 +354,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
     marginLeft: 8,
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 8,
+    fontStyle: 'normal',
   },
   buttonContainer: {
     flexDirection: 'row',
