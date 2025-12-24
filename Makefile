@@ -1,9 +1,9 @@
-# ==============================================================================
+# =====================================================================================
 # 🤖 2025 本地 AI Agent 自动化工作流 (Local AI Agent Automation Workflow)
 # 🛠️ 风格指南：Git-Style CLI 语义契约
-# ------------------------------------------------------------------------------
-# 声明：此 Makefile 是为 AI Agent 设计的原子化操作接口，用于驱动 [立项-实现-同步-发布] 闭环。
-# ==============================================================================
+# -------------------------------------------------------------------------------------
+# 声明：此 Makefile 是为 AI Agent 设计的原子化操作接口，用于驱动 [立项-实现-同步-发布-结项] 闭环。
+# =====================================================================================
 
 # 基础配置
 MSG ?= "update: selective patch"
@@ -125,7 +125,17 @@ push-app: .git-commit
 		gh issue comment $$ISSUE_ID --body "📱 **App 热更新已发布**：EAS Update 已推送到分支 \`$(CURRENT_BRANCH)\`。用户再次打开 App 即可生效。"; \
 	fi
 
-# 5. 帮助系统
+# 5. 结项归档
+close:
+	@if [ -z "$(ID)" ]; then echo "❌ 语义错误: 必须提供 Issue ID。用法: make close ID=n MSG='理由'"; exit 1; fi; \
+	COMMENT="$(MSG)"; \
+	if [ -z "$$COMMENT" ]; then COMMENT="✅ 就此验收!"; fi; \
+	echo "✅ 正在关闭 Issue #$(ID)..."; \
+	gh issue close $(ID) --comment "$$COMMENT"; \
+	iflow "Issue #$(ID) 已物理关闭。结项描述：$$COMMENT \
+	请检查本地工作区和复盘你的改动内容，确保所有契约已履行完毕并按需有序地同步至 IFLOW.md 以完成归档。"
+
+# 6。帮助系统
 help:
 	@echo "🤖 本地 AI Agent 自动化工作流 (Git-Style):"
 	@echo "  make add TITLE='xxx'  	- [意图立项] 创建/同步需求契约"
@@ -134,3 +144,4 @@ help:
 	@echo "  make push MSG='xxx'   	- [全栈分发] 同步发布 Web 与 App"
 	@echo "  make push-web MSG='xxx'	- [独立分发] 仅执行 Web 部署"
 	@echo "  make push-app MSG='xxx'	- [独立分发] 仅执行 App 热更新"
+	@echo "  make close ID=n MSG='x'	- [结项归档] 物理关闭 Issue 并复盘归档"
