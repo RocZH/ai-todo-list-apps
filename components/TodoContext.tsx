@@ -6,7 +6,7 @@ export interface Todo {
   id: string;
   text: string;
   completed: boolean;
-  created_at: string; // Supabase returns dates as strings
+  created_at?: string; // Supabase returns dates as strings, may be undefined in some cases
   ai_generated?: boolean;
 }
 
@@ -192,7 +192,6 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
     if (!text.trim()) return;
 
     try {
-      const timestamp = new Date().toISOString();
       const { data, error } = await supabase
         .from('todos')
         .insert([
@@ -201,7 +200,6 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({ children }) => {
             text: text.trim(),
             completed: false,
             ai_generated: aiGenerated,
-            created_at: timestamp,
           },
         ])
         .select()
