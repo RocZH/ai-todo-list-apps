@@ -61,33 +61,45 @@ add: check-env
 # 2. 逻辑实现 (类比 git commit: AI 代理重构)
 # 逻辑：驱动 AI 读取 Issue 契约执行代码修改，并自主决定后续物理交付目标
 commit: check-env
-	@if [ -z "$(ID)" ]; then echo "❌ 语义错误: Agent 必须提供有效的 ID。用法: make commit ID=n"; exit 1; fi
+	@if [ -z "$(ID)" ]; then echo "❌ 语义错误: 需提供 ID。用法: make commit ID=n"; exit 1; fi	
+	@if [ -z "$$DEEPSEEK_API_KEY" ]; then echo "❌ 错误: 未检测到 DEEPSEEK_API_KEY 环境变量"; exit 1; fi
 	@echo "🧠 AI Agent 正在读取 Issue #$(ID) 的物理契约并启动重构程序..."; \
-	ISSUE_DATA=$$(gh issue view $(ID) --json title,body -q '.title + " - " + .body'); \
-	TITLE_STR=$$(gh issue view $(ID) --json title -q '.title'); \
-	iflow "任务：$$ISSUE_DATA。 \
+	export ISSUE_DATA=$$(gh issue view $(ID) --json title,body -q '.title + "\n\n" + .body'); \
+	export TITLE_STR=$$(gh issue view $(ID) --json title -q '.title'); \
+	\
+	RAW_LOG=$$(iflow "任务内容：\n$$ISSUE_DATA \n\n\
 	工程约束： \
-	1. 必须物理读取 IFLOW.md 并严格遵循其中的契约协议。 \
+	1. 必须物理读取 IFLOW.md 并严格遵循其中的契约协议内容，不仅限于【维护契约】部分。 \
 	2. 修改完成后，必须执行物理验证(如 npx expo prebuild --clean)。 \
 	3. 验证通过后，根据你的改动影响范围自主选择执行以下目标进行分发： \
 	   - 全端发布: make push MSG='feat: ref #$(ID) - $$TITLE_STR' \
 	   - 仅Web端: make push-web MSG='feat: ref #$(ID) - $$TITLE_STR' \
 	   - 仅App端: make push-app MSG='feat: ref #$(ID) - $$TITLE_STR' \
-	4. 必须跟进执行结果：若分发指令报错，须分析原因并尝试修复，直至成功获取交付产物(如 EAS 云端提供的下载链接)。"
+	4. 任务结束必须显式输出相应的交付信息（status, summary, url 等），以便后续解析器自动结项。" | tee /dev/tty); \
+	\
+	echo "\n🔍 DeepSeek 正在分析 AI Agent 输出的交付信息..."; \
+	RESULT_JSON=$$(echo "$$RAW_LOG" | python3 -u scripts/parser.py 2>/dev/null); \
+	STATUS=$$(echo "$$RESULT_JSON" | jq -r '.status // "failed"'); \
+	SUMMARY=$$(echo "$$RESULT_JSON" | jq -r '.summary // "未知错误或解析失败"'); \
+	URL=$$(echo "$$RESULT_JSON" | jq -r '.url // "N/A"'); \
+	\
+	if [ "$$STATUS" = "success" ]; then \
+		echo "✅ 交付确认: $$SUMMARY"; \
+		make close ID=$(ID) MSG="[DeepSeek 自动验收] $$SUMMARY (产物: $$URL)"; \
+	else \
+		echo "❌ 交付未完成或解析异常: $$SUMMARY"; \
+		exit 1; \
+	fi
 
 # 3. 契约同步 (类比 git checkout: 状态一致性)
 # 作用：保持本地 .github/issues/ 目录作为云端真理来源的物理镜像
 checkout: check-env
-	@echo "📥 正在执行物理同步：GitHub Cloud -> 本地 Agent 工作区..."; \
+	@echo "📥 从 GitHub 同步新契约到本地 .github/ 子目录..."; \
 	mkdir -p $(ISSUE_DIR); \
-	gh issue list --state open --json number,title,body --limit 20 | \
-	jq -r '.[] | @base64' | \
-	while read -r b64; do \
-		JSON=$$(echo "$$b64" | base64 --decode); \
-		FILENAME=$$(echo "$$JSON" | jq -r '.title + " #" + (.number | tostring) + ".md"'); \
-		CONTENT=$$(echo "$$JSON" | jq -r '.body'); \
-		printf "%s" "$$CONTENT" > "$(ISSUE_DIR)/$$FILENAME"; \
-	done; \
+	gh issue list --state open --json number,title,body --limit 20 > .issues.json; \
+	jq -r '.[] | "cat << \"EOF\" > \"$(ISSUE_DIR)/" + (.title | gsub("[\\/\\:?*\"<>|]"; "_")) + " #" + (.number | tostring) + ".md\"\n" + .body + "\nEOF\n"' .issues.json > .sync.sh; \
+	sh .sync.sh; \
+	rm .issues.json .sync.sh; \
 	echo "✅ 契约同步完成。Agent 现在可以读取 $(ISSUE_DIR)/ 下的最新需求。"
 
 # ------------------------------------------------------------------------------

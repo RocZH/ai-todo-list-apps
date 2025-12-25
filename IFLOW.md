@@ -283,5 +283,5 @@ AI功能基于关键词匹配算法，通过分析用户输入的内容来生成
 - **物理验证**：在执行 `make patch` 或任何发布指令前，必须先在本地成功执行 `npx expo prebuild --clean`，确保原生依赖（Autolinking）无冲突。
 - **锁文件同步**：任何依赖变更后，必须确保 `pnpm-lock.yaml` 已更新并包含在提交中，严禁在云端构建时产生锁文件偏移。
 - **环境隔离**：生产环境变量必须严格通过 [Expo Dashboard](https://expo.dev) 和 [Vercel Dashboard](https://vercel.com) 进行配置，严禁将敏感 Key 硬编码至代码库。
-- **Issue跟踪**：所有功能开发必须通过 `make add` 创建Issue进行跟踪，通过 `make commit ID=n` 执行开发。
+- **Issue跟踪**：所有功能开发必须通过 `make add` 创建Issue进行跟踪，通过 `make commit ID=n` 执行开发。同时，所有交付行为（如执行 push）必须产生明确的物理结果标识（如 URL 链接或 Success 关键字）。
 - **AI集成**：AI代理在执行任务时必须读取IFLOW.md的契约协议并严格遵循。
