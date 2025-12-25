@@ -85,7 +85,7 @@ commit: check-env
 	\
 	if [ "$$STATUS" = "success" ]; then \
 		echo "✅ 交付确认: $$SUMMARY"; \
-		make close ID=$(ID) MSG="[DeepSeek 自动验收] $$SUMMARY (产物: $$URL)"; \
+		make close ID=$(ID) MSG="【由 DeepSeek 自动验收】 $$SUMMARY (产物: $$URL)"; \
 	else \
 		echo "❌ 交付未完成或解析异常: $$SUMMARY"; \
 		exit 1; \

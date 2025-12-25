@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!_next|_static|_vercel|api|assets|favicon.ico|sw.js).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "trailingSlash": false
+}

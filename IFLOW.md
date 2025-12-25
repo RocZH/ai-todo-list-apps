@@ -121,6 +121,12 @@ CREATE INDEX IF NOT EXISTS idx_todos_created_at ON todos (created_at);
 - 支持批量添加所有建议到待办列表
 - 标记AI生成的待办事项，便于识别
 
+### 5. 路由配置与重定向 (app/two.tsx)
+- 为解决Web端刷新时的404错误而添加路由重定向
+- 通过Redirect组件从/two路径重定向到/(tabs)/two路径
+- 确保Web用户可以直接访问或刷新/two路径而不会遇到404错误
+- 保持Android和iOS应用不受影响，维持跨平台兼容性
+
 ## 构建和运行
 
 ### 开发环境设置
@@ -224,6 +230,7 @@ eas update --branch main         # 热更新发布
 - 使用路径别名（@/*）导入模块
 - 遵循TypeScript严格模式
 - 使用可访问性标签提升用户体验
+- 考虑Web端路由兼容性，必要时添加重定向以避免404错误
 
 ### 项目配置
 - **Expo SDK**: 54.0.30
